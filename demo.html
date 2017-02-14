@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<!--
+	(c) Copyright 2016, Sean Connelly (@voidqk), http://syntheti.cc
+	MIT License
+	Project Home: https://github.com/voidqk/cnvui
+	-->
+	<title>cnvui demo</title>
+	<script src="cnvui.js"></script>
+</head>
+<body>
+	<canvas id="cnv" width="1600" height="1200" style="width: 800px; height: 600px;"></canvas>
+	<script>
+
+var cui = CnvUI().attach(document.getElementById('cnv'));
+
+cui.addButton({
+	pt1: { from: 'topleft', x: 50, y: 50 },
+	pt2: { from: 'topright', x: 50, y: 150 },
+	text: 'Hello',
+	padding: 10,
+	dy: 5,
+	click: function(comp){
+		console.log('Clicked button');
+	}
+});
+
+	</script>
+</body>
+</html>
