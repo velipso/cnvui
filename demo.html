@@ -16,14 +16,19 @@
 var cui = CnvUI().attach(document.getElementById('cnv'));
 
 cui.addButton({
-	pt1: { from: 'topleft', x: 50, y: 50 },
+	pt1: { from: 'topleft' , x: 50, y:  50 },
 	pt2: { from: 'topright', x: 50, y: 150 },
-	text: 'Hello',
+	text: 'Hello\nWorld',
 	padding: 10,
 	dy: 5,
-	click: function(comp){
-		console.log('Clicked button');
-	}
+	click: (function(){
+		var times = 0;
+		return function(comp){
+			times++;
+			comp.state.text = 'Clicked ' + times + ' time' + (times != 1 ? 's' : '');
+			comp.invalidate();
+		};
+	})()
 });
 
 	</script>

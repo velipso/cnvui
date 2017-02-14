@@ -6,6 +6,7 @@ function CnvUI(){
 	var my, cnv = null, ctx = null;
 	var redrawing = false;
 	var curover = false;
+	var curcapture = false;
 
 	function has(obj, key){
 		return Object.prototype.hasOwnProperty.call(obj, key);
@@ -68,23 +69,42 @@ function CnvUI(){
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		comp.mdown(comp, mp[0], mp[1]);
+		if (comp.mdown(comp, mp[0], mp[1]) === true){ // capture mouse?
+			if (cnv.setCapture)
+				cnv.setCapture();
+			curcapture = comp;
+		}
 	}
 
 	function mup(e){
 		var mp = mpos(e);
+		if (curcapture){
+			var r = curcapture.rect();
+			var over = mp[0] >= r.x && mp[0] < r.x + r.width &&
+				mp[1] >= r.y && mp[1] < r.y + r.height;
+			curcapture.mup(curcapture, mp[0], mp[1], true, over);
+			curcapture = false;
+			return;
+		}
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		comp.mup(comp, mp[0], mp[1]);
+		comp.mup(comp, mp[0], mp[1], false, true);
 	}
 
 	function mmove(e){
 		var mp = mpos(e);
+		if (curcapture){
+			var r = curcapture.rect();
+			var over = mp[0] >= r.x && mp[0] < r.x + r.width &&
+				mp[1] >= r.y && mp[1] < r.y + r.height;
+			curcapture.mmove(curcapture, mp[0], mp[1], true, over);
+			return;
+		}
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		comp.mmove(comp, mp[0], mp[1]);
+		comp.mmove(comp, mp[0], mp[1], false, true);
 	}
 
 	function kdown(e){
@@ -234,7 +254,6 @@ function CnvUI(){
 			return my;
 		},
 		redraw: function(){
-			console.log('redrawing');
 			redrawing = false;
 
 			function style(){
@@ -297,7 +316,7 @@ function CnvUI(){
 					lineHeight: has(opts, 'lineHeight') ? opts.lineHeight : 1,
 					fontSize: has(opts, 'fontSize') ? opts.fontSize : false
 				},
-				mover: function(comp){
+				mover: function(comp, mx, my){
 					comp.state.mstate = 'hover';
 					comp.invalidate();
 				},
@@ -305,14 +324,25 @@ function CnvUI(){
 					comp.state.mstate = 'normal';
 					comp.invalidate();
 				},
-				mdown: function(comp){
+				mdown: function(comp, mx, my){
 					comp.state.mstate = 'active';
 					comp.invalidate();
+					return true; // capture mouse
 				},
-				mup: function(comp){
-					comp.state.mstate = 'hover';
-					comp.state.click(comp);
+				mup: function(comp, mx, my, cap, over){
+					comp.state.mstate = over ? 'hover' : 'normal';
+					if (cap && over)
+						comp.state.click(comp);
 					comp.invalidate();
+				},
+				mmove: function(comp, mx, my, cap, over){
+					if (cap){
+						var st = over ? 'active' : 'normal';
+						if (st !== comp.state.mstate){
+							comp.state.mstate = st;
+							comp.invalidate();
+						}
+					}
 				},
 				redraw: function(comp, style, ctx){
 					var r = comp.rect();
