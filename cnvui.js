@@ -3,6 +3,23 @@
 // Project Home: https://github.com/voidqk/cnvui
 
 function CnvUI(){
+	var defaultSkin = {
+		button: {
+			font    : 'sans-serif',
+			normal  : { bg: '#007', fg: '#fff' },
+			disabled: { bg: '#777', fg: '#bbb' },
+			hover   : { bg: '#33c', fg: '#fff' },
+			active  : { bg: '#55f', fg: '#fff' }
+		},
+		scrollbar: {
+			gutter: { normal: '#88f', disabled: '#777', hover: '#aaf', active: '#ccf' },
+			button: { normal: '#400', disabled: '#777', hover: '#700', active: '#b00' },
+			arrow : { normal: '#000', disabled: '#777', hover: '#333', active: '#444' },
+			thumb : { normal: '#aaa', disabled: '#777', hover: '#ccc', active: '#eee' },
+			edge  : { normal: '#bbb', disabled: '#777', hover: '#ddd', active: '#eee' }
+		}
+	};
+
 	var my, cnv = null, ctx = null;
 	var redrawing = false;
 	var curover = false;
@@ -41,98 +58,90 @@ function CnvUI(){
 
 		if (ret !== curover){
 			if (curover)
-				curover.mout(curover);
+				curover.mouseOut(curover);
 			curover = ret;
 			if (curover)
-				curover.mover(curover, mp[0], mp[1]);
+				curover.mouseOver(curover, mp[0], mp[1]);
 		}
 
 		return ret;
 	}
 
-	function mover(e){
+	function mouseOver(e){
 		var mp = mpos(e);
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
 	}
 
-	function mout(e){
+	function mouseOut(e){
 		var mp = mpos(e);
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
 	}
 
-	function mdown(e){
+	function mouseDown(e){
 		var mp = mpos(e);
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		if (comp.mdown(comp, mp[0], mp[1]) === true){ // capture mouse?
+		if (comp.mouseDown(comp, mp[0], mp[1]) === true){ // capture mouse?
 			if (cnv.setCapture)
 				cnv.setCapture();
 			curcapture = comp;
 		}
 	}
 
-	function mup(e){
+	function mouseUp(e){
 		var mp = mpos(e);
 		if (curcapture){
 			var r = curcapture.rect();
 			var over = mp[0] >= r.x && mp[0] < r.x + r.width &&
 				mp[1] >= r.y && mp[1] < r.y + r.height;
-			curcapture.mup(curcapture, mp[0], mp[1], true, over);
+			curcapture.mouseUp(curcapture, mp[0], mp[1], true, over);
 			curcapture = false;
 			return;
 		}
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		comp.mup(comp, mp[0], mp[1], false, true);
+		comp.mouseUp(comp, mp[0], mp[1], false, true);
 	}
 
-	function mmove(e){
+	function mouseMove(e){
 		var mp = mpos(e);
 		if (curcapture){
 			var r = curcapture.rect();
 			var over = mp[0] >= r.x && mp[0] < r.x + r.width &&
 				mp[1] >= r.y && mp[1] < r.y + r.height;
-			curcapture.mmove(curcapture, mp[0], mp[1], true, over);
+			curcapture.mouseMove(curcapture, mp[0], mp[1], true, over);
 			return;
 		}
 		var comp = mhit(mp);
 		if (comp === false)
 			return;
-		comp.mmove(comp, mp[0], mp[1], false, true);
+		comp.mouseMove(comp, mp[0], mp[1], false, true);
 	}
 
-	function kdown(e){
+	function keyDown(e){
 	}
 
-	function kup(e){
+	function keyUp(e){
 	}
 
 	my = {
 		components: [],
-		skin: {
-			button: {
-				font    : 'sans-serif',
-				normal  : { bg: '#007', fg: '#fff' },
-				disabled: { bg: '#777', fg: '#bbb' },
-				hover   : { bg: '#33c', fg: '#fff' },
-				active  : { bg: '#55f', fg: '#fff' }
-			}
-		},
+		skin: defaultSkin,
 		detach: function(){
 			if (cnv){
-				cnv.removeEventListener('mouseover', mover);
-				cnv.removeEventListener('mouseout' , mout );
-				cnv.removeEventListener('mousedown', mdown);
-				cnv.removeEventListener('mouseup'  , mup  );
-				cnv.removeEventListener('mousemove', mmove);
-				cnv.removeEventListener('keydown'  , kdown);
-				cnv.removeEventListener('keyup'    , kup  );
+				cnv.removeEventListener('mouseover', mouseOver);
+				cnv.removeEventListener('mouseout' , mouseOut );
+				cnv.removeEventListener('mousedown', mouseDown);
+				cnv.removeEventListener('mouseup'  , mouseUp  );
+				cnv.removeEventListener('mousemove', mouseMove);
+				cnv.removeEventListener('keydown'  , keyDown  );
+				cnv.removeEventListener('keyup'    , keyUp    );
 				cnv = null;
 				ctx = null;
 			}
@@ -142,13 +151,13 @@ function CnvUI(){
 			my.detach();
 			cnv = newcnv;
 			ctx = cnv.getContext('2d');
-			cnv.addEventListener('mouseover', mover);
-			cnv.addEventListener('mouseout' , mout );
-			cnv.addEventListener('mousedown', mdown);
-			cnv.addEventListener('mouseup'  , mup  );
-			cnv.addEventListener('mousemove', mmove);
-			cnv.addEventListener('keydown'  , kdown);
-			cnv.addEventListener('keyup'    , kup  );
+			cnv.addEventListener('mouseover', mouseOver);
+			cnv.addEventListener('mouseout' , mouseOut );
+			cnv.addEventListener('mousedown', mouseDown);
+			cnv.addEventListener('mouseup'  , mouseUp  );
+			cnv.addEventListener('mousemove', mouseMove);
+			cnv.addEventListener('keydown'  , keyDown  );
+			cnv.addEventListener('keyup'    , keyUp    );
 			return my;
 		},
 		addComponent: function(opts){
@@ -165,11 +174,11 @@ function CnvUI(){
 			//   // function ptX(relativePt, canvasWidth, canvasHeight){ return [x, y] }
 			//
 			//   redraw: function(comp, style, ctx){ ... }, // redraw code (required)
-			//   mover: function(comp, mx, my){ ... }, // fired when mouse goes over component
-			//   mout: function(comp){ ... }, // mouse out
-			//   mdown: function(comp, mx, my){ ... }, // mouse down
-			//   mup: function(comp, mx, my){ ... }, // mouse up
-			//   mmove: function(comp, mx, my){ ... }, // mouse move
+			//   mouseOver: function(comp, mx, my){ ... }, // fired when mouse goes over component
+			//   mouseOut: function(comp){ ... }, // mouse out
+			//   mouseDown: function(comp, mx, my){ ... }, // mouse down
+			//   mouseUp: function(comp, mx, my){ ... }, // mouse up
+			//   mouseMove: function(comp, mx, my){ ... }, // mouse move
 			//   canFocus: true | false, // can the component get keyboard focus?
 			//   visible: true | false, // is the component visible?
 			//   enabled: true | false, // is the component enabled?
@@ -184,11 +193,11 @@ function CnvUI(){
 				enabled: has(opts, 'enabled') ? opts.enabled : true,
 				state: opts.state,
 				redraw: opts.redraw,
-				mover: has(opts, 'mover') ? opts.mover : nop,
-				mout : has(opts, 'mout' ) ? opts.mout  : nop,
-				mdown: has(opts, 'mdown') ? opts.mdown : nop,
-				mup  : has(opts, 'mup'  ) ? opts.mup   : nop,
-				mmove: has(opts, 'mmove') ? opts.mmove : nop,
+				mouseOver: has(opts, 'mouseOver') ? opts.mouseOver : nop,
+				mouseOut : has(opts, 'mouseOut' ) ? opts.mouseOut  : nop,
+				mouseDown: has(opts, 'mouseDown') ? opts.mouseDown : nop,
+				mouseUp  : has(opts, 'mouseUp'  ) ? opts.mouseUp   : nop,
+				mouseMove: has(opts, 'mouseMove') ? opts.mouseMove : nop,
 				invalidated: true,
 				invalidate: function(){ // call to force a redraw
 					comp.invalidated = true;
@@ -257,7 +266,7 @@ function CnvUI(){
 			redrawing = false;
 
 			function style(){
-				// perform a lookup of a value in skin using the arguments
+				// perform a lookeyUp of a value in skin using the arguments
 				var here = my.skin;
 				function next(k){
 					if (Object.prototype.toString.call(here) === '[object Object]' && has(here, k))
@@ -294,7 +303,7 @@ function CnvUI(){
 			//   text: 'Button Text', // optionally a function for drawing the button face
 			//   skin: ['skin', 'path'], // defaults to ['button']
 			//   enabled: true | false,
-			//   click: function(){ ... called when button is clicked ... },
+			//   click: function(comp){ ... called when button is clicked ... },
 			//   dx: 0, // amount to move the text when the button is active
 			//   dy: 0, // amount to move the text when the button is active
 			//   padding: 0, // amount of vertical padding for text
@@ -316,26 +325,26 @@ function CnvUI(){
 					lineHeight: has(opts, 'lineHeight') ? opts.lineHeight : 1,
 					fontSize: has(opts, 'fontSize') ? opts.fontSize : false
 				},
-				mover: function(comp, mx, my){
+				mouseOver: function(comp, mx, my){
 					comp.state.mstate = 'hover';
 					comp.invalidate();
 				},
-				mout: function(comp){
+				mouseOut: function(comp){
 					comp.state.mstate = 'normal';
 					comp.invalidate();
 				},
-				mdown: function(comp, mx, my){
+				mouseDown: function(comp, mx, my){
 					comp.state.mstate = 'active';
 					comp.invalidate();
 					return true; // capture mouse
 				},
-				mup: function(comp, mx, my, cap, over){
+				mouseUp: function(comp, mx, my, cap, over){
 					comp.state.mstate = over ? 'hover' : 'normal';
 					if (cap && over)
 						comp.state.click(comp);
 					comp.invalidate();
 				},
-				mmove: function(comp, mx, my, cap, over){
+				mouseMove: function(comp, mx, my, cap, over){
 					if (cap){
 						var st = over ? 'active' : 'normal';
 						if (st !== comp.state.mstate){
@@ -372,6 +381,290 @@ function CnvUI(){
 						}
 					}
 					ctx.restore();
+				}
+			});
+		},
+		addScrollbar: function(opts){
+			// opts is an object with the following keys:
+			// {
+			//   pt1: (see addComponent's pt1),
+			//   pt2: (see addComponent's pt2),
+			//   skin: ['skin', 'path'], // defaults to ['scrollbar']
+			//   enabled: true | false,
+			//   horizontal: true | false,
+			//   dx: 0, // amount to move the arrow when the button is active
+			//   dy: 0, // amount to move the arrow when the button is active
+			//   edgeSize: 0, // edge at thumb for resiziable window sizes (0 to disable)
+			//   value: 0, // starting position
+			//   windowRange: [low, high],
+			//   windowSize: 1,
+			//   update: function(comp, value, size){ ... called when the scroll is updated ... },
+			//   // can return { value: newValue, size: newSize } to alter the updated value
+			// }
+			return my.addComponent({
+				pt1: opts.pt1,
+				pt2: opts.pt2,
+				state: {
+					mstate: { over: false, active: false },
+					skin: has(opts, 'skin') ? opts.skin : ['scrollbar'],
+					horizontal: opts.horizontal,
+					dx: has(opts, 'dx') ? opts.dx : 0,
+					dy: has(opts, 'dy') ? opts.dy : 0,
+					edgeSize: has(opts, 'edgeSize') ? opts.edgeSize : 0,
+					value: has(opts, 'value') ? opts.value : 0,
+					windowRange: opts.windowRange,
+					windowSize: has(opts, 'windowSize') ? opts.windowSize : 1,
+					dragStart: 0,
+					update: opts.update,
+					regions: function(comp){
+						var r = comp.rect();
+						var dwr = comp.state.windowRange[1] - comp.state.windowRange[0];
+						var value1p = (comp.state.value - comp.state.windowRange[0]) / dwr;
+						var value2p = (comp.state.value - comp.state.windowRange[0] +
+							comp.state.windowSize) / dwr;
+						if (comp.state.horizontal){
+							var gutterw = r.width - r.height * 2;
+							var thumb1pos = Math.round(value1p * gutterw);
+							var thumb2pos = Math.round(value2p * gutterw);
+							return {
+								valuePerPix: dwr / gutterw,
+								arrow1: {
+									x: r.x,
+									y: r.y,
+									width: r.height,
+									height: r.height
+								},
+								arrow2: {
+									x: r.x + r.width - r.height,
+									y: r.y,
+									width: r.height,
+									height: r.height
+								},
+								gutter: {
+									x: r.x + r.height,
+									y: r.y,
+									width: gutterw,
+									height: r.height
+								},
+								edge1: {
+									x: r.x + r.height + thumb1pos,
+									y: r.y,
+									width: comp.state.edgeSize,
+									height: r.height
+								},
+								thumb: {
+									x: r.x + r.height + thumb1pos + comp.state.edgeSize,
+									y: r.y,
+									width: thumb2pos - thumb1pos - 2 * comp.state.edgeSize,
+									height: r.height
+								},
+								edge2: {
+									x: r.x + r.height + thumb2pos - comp.state.edgeSize,
+									y: r.y,
+									width: comp.state.edgeSize,
+									height: r.height
+								}
+							};
+						}
+						else{
+							return {
+								valuePerPix: dwr / gutterw,
+								arrow1: {
+									x: r.x,
+									y: r.y,
+									width: r.width,
+									height: r.width
+								},
+								arrow2: {
+									x: r.x,
+									y: r.y + r.height - r.width,
+									width: r.width,
+									height: r.width
+								},
+								gutter: {
+									x: r.x,
+									y: r.y + r.width,
+									width: r.width,
+									height: r.height - r.width * 2
+								},
+								edge1: {
+									x: r.x,
+									y: 0,
+									width: r.width,
+									height: comp.state.edgeSize
+								},
+								thumb: {
+									x: r.x,
+									y: 0,
+									width: r.width,
+									height: 10
+								},
+								edge2: {
+									x: r.x,
+									y: 0,
+									width: r.width,
+									height: comp.state.edgeSize
+								}
+							};
+						}
+					},
+					calcMouseState: function(comp, mx, my){
+						var r = comp.state.regions(comp);
+						comp.state.mstate.over = false;
+						comp.state.mstate.active = false;
+						function testr(ov){
+							var rr = r[ov];
+							if (mx >= rr.x && mx < rr.x + rr.width &&
+								my >= rr.y && my < rr.y + rr.height)
+								comp.state.mstate.over = ov;
+						}
+						testr('gutter');
+						testr('edge1');
+						testr('edge2');
+						testr('thumb');
+						testr('arrow1');
+						testr('arrow2');
+					}
+				},
+				mouseOver: function(comp, mx, my){
+					comp.state.calcMouseState(comp, mx, my);
+					comp.invalidate();
+				},
+				mouseOut: function(comp){
+					comp.state.mstate.over = false;
+					comp.state.mstate.active = false;
+					comp.invalidate();
+				},
+				mouseDown: function(comp, mx, my){
+					comp.state.calcMouseState(comp, mx, my);
+					comp.state.mstate.active = true;
+					comp.invalidate();
+					if ((['edge1', 'thumb', 'edge2']).indexOf(comp.state.mstate.over) >= 0){
+						// draggable
+						comp.state.dragStart = comp.state.horizontal ? mx : my;
+						return true; // capture mouse
+					}
+					// TODO: handle click
+				},
+				mouseUp: function(comp, mx, my, cap, over){
+					comp.state.calcMouseState(comp, mx, my);
+					comp.invalidate();
+				},
+				mouseMove: function(comp, mx, my, cap, over){
+					if (cap){
+						var r = comp.state.regions(comp);
+						var md = comp.state.horizontal ? mx : my;
+						var vd = r.valuePerPix * (md - comp.state.dragStart);
+						switch (comp.state.mstate.over){
+							case 'edge1':
+								var ov = comp.state.value;
+								var os = comp.state.windowSize;
+								var nv = Math.min(
+									Math.max(comp.state.windowRange[0], ov + vd),
+									comp.state.windowRange[1] - comp.state.windowSize);
+								var ns = comp.state.windowSize + ov - nv;
+								if (ns <= 0){
+									nv += ns - os;
+									ns = os;
+								}
+								var u = comp.state.update(comp, nv, ns);
+								if (typeof u === 'undefined')
+									u = { value: nv, size: ns };
+								if (u.size <= 0){
+									u.value += u.size - os;
+									u.size = os;
+								}
+								else if (u.size > comp.state.windowRange[1] -
+										comp.state.windowRange[0]){
+									u.size = comp.state.windowRange[1] - comp.state.windowRange[0];
+								}
+								u.value = Math.min(
+									Math.max(comp.state.windowRange[0], u.value),
+									comp.state.windowRange[1] - u.size);
+								if (u !== false && (u.value !== ov || u.size !== os)){
+									comp.state.value = u.value;
+									comp.state.windowSize = u.size;
+									comp.state.dragStart += (u.value - ov) / r.valuePerPix;
+									comp.invalidate();
+								}
+								break;
+							case 'thumb':
+								var ov = comp.state.value;
+								var os = comp.state.windowSize;
+								var nv = Math.min(
+									Math.max(comp.state.windowRange[0], ov + vd),
+									comp.state.windowRange[1] - comp.state.windowSize);
+								var u = comp.state.update(comp, nv, comp.state.windowSize);
+								if (typeof u === 'undefined')
+									u = { value: nv, size: comp.state.windowSize };
+								if (u.size <= 0)
+									u.size = os;
+								else if (u.size > comp.state.windowRange[1] -
+										comp.state.windowRange[0]){
+									u.size = comp.state.windowRange[1] - comp.state.windowRange[0];
+								}
+								u.value = Math.min(
+									Math.max(comp.state.windowRange[0], u.value),
+									comp.state.windowRange[1] - u.size);
+								if (u !== false && (u.value !== ov || u.size !== os)){
+									comp.state.value = u.value;
+									comp.state.windowSize = u.size;
+									comp.state.dragStart += (u.value - ov) / r.valuePerPix;
+									comp.invalidate();
+								}
+								break;
+							case 'edge2':
+								var ov = comp.state.value;
+								var os = comp.state.windowSize;
+								var ns = os + vd;
+								if (ns <= 0)
+									ns = os;
+								var u = comp.state.update(comp, comp.state.value, ns);
+								if (typeof u === 'undefined')
+									u = { value: nv, size: ns };
+								if (u.size <= 0)
+									u.size = os;
+								else if (u.size > comp.state.windowRange[1] -
+										comp.state.windowRange[0]){
+									u.size = comp.state.windowRange[1] - comp.state.windowRange[0];
+								}
+								u.value = Math.min(
+									Math.max(comp.state.windowRange[0], u.value),
+									comp.state.windowRange[1] - u.size);
+								if (u !== false && (u.value !== ov || u.size !== os)){
+									comp.state.value = u.value;
+									comp.state.windowSize = u.size;
+									comp.state.dragStart += (u.size - os) / r.valuePerPix;
+									comp.invalidate();
+								}
+								break;
+						}
+					}
+					else{
+						comp.state.calcMouseState(comp, mx, my);
+						comp.invalidate();
+					}
+				},
+				redraw: function(comp, style, ctx){
+					var r = comp.state.regions(comp);
+					function getst(cat, over){
+						return style(comp.state.skin, cat,
+							!comp.enabled ? 'disabled' :
+							comp.state.mstate.over === over ?
+								(comp.state.mstate.active ? 'active' : 'hover') : 'normal');
+					}
+					ctx.fillStyle = getst('gutter', 'gutter');
+					ctx.fillRect(r.gutter.x, r.gutter.y, r.gutter.width, r.gutter.height);
+					ctx.fillStyle = getst('button', 'arrow1');
+					ctx.fillRect(r.arrow1.x, r.arrow1.y, r.arrow1.width, r.arrow1.height);
+					ctx.fillStyle = getst('button', 'arrow2');
+					ctx.fillRect(r.arrow2.x, r.arrow2.y, r.arrow2.width, r.arrow2.height);
+					ctx.fillStyle = getst('edge', 'edge1');
+					ctx.fillRect(r.edge1.x, r.edge1.y, r.edge1.width, r.edge1.height);
+					ctx.fillStyle = getst('thumb', 'thumb');
+					ctx.fillRect(r.thumb.x, r.thumb.y, r.thumb.width, r.thumb.height);
+					ctx.fillStyle = getst('edge', 'edge2');
+					ctx.fillRect(r.edge2.x, r.edge2.y, r.edge2.width, r.edge2.height);
 				}
 			});
 		}

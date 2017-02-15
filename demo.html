@@ -31,6 +31,19 @@ cui.addButton({
 	})()
 });
 
+cui.addScrollbar({
+	pt1: { from: 'topleft' , x: 50, y: 170 },
+	pt2: { from: 'topright', x: 50, y: 230 },
+	horizontal: true,
+	dy: 5,
+	edgeSize: 16,
+	windowRange: [0, 50],
+	windowSize: 10,
+	update: function(comp, start, size){
+		return { value: Math.round(start), size: Math.round(size) };
+	}
+});
+
 	</script>
 </body>
 </html>
