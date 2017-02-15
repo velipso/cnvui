@@ -398,10 +398,11 @@ function CnvUI(){
 			//   value: 0, // starting position
 			//   windowRange: [low, high],
 			//   windowSize: 1,
-			//   update: function(comp, value, size){ ... called when the scroll is updated ... },
-			//   // can return { value: newValue, size: newSize } to alter the updated value
+			//   beforeUpdate: function(comp, value, size){ ... returns new values ... },
+			//   // returns: { value: newValue, size: newSize } to alter the updated value
+			//   update: function(comp, value, size){ ... values have been updated ... }
 			// }
-			return my.addComponent({
+			var comp = my.addComponent({
 				pt1: opts.pt1,
 				pt2: opts.pt2,
 				state: {
@@ -411,11 +412,27 @@ function CnvUI(){
 					dx: has(opts, 'dx') ? opts.dx : 0,
 					dy: has(opts, 'dy') ? opts.dy : 0,
 					edgeSize: has(opts, 'edgeSize') ? opts.edgeSize : 0,
-					value: has(opts, 'value') ? opts.value : 0,
+					value: false,
 					windowRange: opts.windowRange,
-					windowSize: has(opts, 'windowSize') ? opts.windowSize : 1,
+					windowSize: false,
 					dragStart: 0,
+					beforeUpdate: has(opts, 'beforeUpdate') ? opts.beforeUpdate : function(){},
 					update: opts.update,
+					set: function(comp, value, size){
+						if (size <= 0)
+							size = 1;
+						var rng = comp.state.windowRange[1] - comp.state.windowRange[0];
+						if (size > rng)
+							size = rng;
+						value = Math.min(Math.max(comp.state.windowRange[0], value),
+							comp.state.windowRange[1] - size);
+						if (value !== comp.state.value || size !== comp.state.size){
+							comp.state.value = value;
+							comp.state.windowSize = size;
+							comp.state.update(comp, value, size);
+							comp.invalidate();
+						}
+					},
 					regions: function(comp){
 						var r = comp.rect();
 						var dwr = comp.state.windowRange[1] - comp.state.windowRange[0];
@@ -559,15 +576,23 @@ function CnvUI(){
 							case 'edge1':
 								var ov = comp.state.value;
 								var os = comp.state.windowSize;
-								var nv = Math.min(
-									Math.max(comp.state.windowRange[0], ov + vd),
-									comp.state.windowRange[1] - comp.state.windowSize);
-								var ns = comp.state.windowSize + ov - nv;
+								var ns = os - vd;
+								var nv = ov + vd;
+								if (nv < comp.state.windowRange[0]){
+									ns += nv - comp.state.windowRange[0];
+									nv = comp.state.windowRange[0];
+								}
 								if (ns <= 0){
 									nv += ns - os;
 									ns = os;
 								}
-								var u = comp.state.update(comp, nv, ns);
+								else if (ns >
+									comp.state.windowRange[1] - comp.state.windowRange[0]){
+									ns = comp.state.windowRange[1] - comp.state.windowRange[0];
+								}
+								nv = Math.min(Math.max(comp.state.windowRange[0], nv),
+									comp.state.windowRange[1] - ns);
+								var u = comp.state.beforeUpdate(comp, nv, ns);
 								if (typeof u === 'undefined')
 									u = { value: nv, size: ns };
 								if (u.size <= 0){
@@ -582,10 +607,8 @@ function CnvUI(){
 									Math.max(comp.state.windowRange[0], u.value),
 									comp.state.windowRange[1] - u.size);
 								if (u !== false && (u.value !== ov || u.size !== os)){
-									comp.state.value = u.value;
-									comp.state.windowSize = u.size;
 									comp.state.dragStart += (u.value - ov) / r.valuePerPix;
-									comp.invalidate();
+									comp.state.set(comp, u.value, u.size);
 								}
 								break;
 							case 'thumb':
@@ -594,7 +617,7 @@ function CnvUI(){
 								var nv = Math.min(
 									Math.max(comp.state.windowRange[0], ov + vd),
 									comp.state.windowRange[1] - comp.state.windowSize);
-								var u = comp.state.update(comp, nv, comp.state.windowSize);
+								var u = comp.state.beforeUpdate(comp, nv, comp.state.windowSize);
 								if (typeof u === 'undefined')
 									u = { value: nv, size: comp.state.windowSize };
 								if (u.size <= 0)
@@ -607,10 +630,8 @@ function CnvUI(){
 									Math.max(comp.state.windowRange[0], u.value),
 									comp.state.windowRange[1] - u.size);
 								if (u !== false && (u.value !== ov || u.size !== os)){
-									comp.state.value = u.value;
-									comp.state.windowSize = u.size;
 									comp.state.dragStart += (u.value - ov) / r.valuePerPix;
-									comp.invalidate();
+									comp.state.set(comp, u.value, u.size);
 								}
 								break;
 							case 'edge2':
@@ -619,7 +640,9 @@ function CnvUI(){
 								var ns = os + vd;
 								if (ns <= 0)
 									ns = os;
-								var u = comp.state.update(comp, comp.state.value, ns);
+								else if (comp.state.value + ns > comp.state.windowRange[1])
+									ns = comp.state.windowRange[1] - comp.state.value;
+								var u = comp.state.beforeUpdate(comp, comp.state.value, ns);
 								if (typeof u === 'undefined')
 									u = { value: nv, size: ns };
 								if (u.size <= 0)
@@ -632,10 +655,8 @@ function CnvUI(){
 									Math.max(comp.state.windowRange[0], u.value),
 									comp.state.windowRange[1] - u.size);
 								if (u !== false && (u.value !== ov || u.size !== os)){
-									comp.state.value = u.value;
-									comp.state.windowSize = u.size;
 									comp.state.dragStart += (u.size - os) / r.valuePerPix;
-									comp.invalidate();
+									comp.state.set(comp, u.value, u.size);
 								}
 								break;
 						}
@@ -667,6 +688,10 @@ function CnvUI(){
 					ctx.fillRect(r.edge2.x, r.edge2.y, r.edge2.width, r.edge2.height);
 				}
 			});
+			comp.state.set(comp,
+				has(opts, 'value') ? opts.value : 0,
+				has(opts, 'windowSize') ? opts.windowSize : 1);
+			return comp;
 		}
 	};
 	return my;

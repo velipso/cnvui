@@ -13,7 +13,9 @@
 	<canvas id="cnv" width="1600" height="1200" style="width: 800px; height: 600px;"></canvas>
 	<script>
 
-var cui = CnvUI().attach(document.getElementById('cnv'));
+var cnv = document.getElementById('cnv');
+var ctx = cnv.getContext('2d');
+var cui = CnvUI().attach(cnv);
 
 cui.addButton({
 	pt1: { from: 'topleft' , x: 50, y:  50 },
@@ -39,8 +41,21 @@ cui.addScrollbar({
 	edgeSize: 16,
 	windowRange: [0, 50],
 	windowSize: 10,
-	update: function(comp, start, size){
+	beforeUpdate: function(comp, start, size){
 		return { value: Math.round(start), size: Math.round(size) };
+	},
+	update: function(comp, start, size){
+		ctx.fillStyle = '#f00';
+		ctx.fillRect(50, 230, cnv.width - 100, 100);
+		ctx.save();
+		ctx.beginPath();
+		ctx.rect(50, 230, cnv.width - 100, 100);
+		ctx.closePath();
+		ctx.clip();
+		([[0, 30, 10]]]).forEach(function(rect){
+
+		});
+		ctx.restore();
 	}
 });
 
