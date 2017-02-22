@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 	<!--
-	(c) Copyright 2016, Sean Connelly (@voidqk), http://syntheti.cc
+	(c) Copyright 2017, Sean Connelly (@voidqk), http://syntheti.cc
 	MIT License
 	Project Home: https://github.com/voidqk/cnvui
 	-->
@@ -15,9 +15,9 @@
 
 var cnv = document.getElementById('cnv');
 var ctx = cnv.getContext('2d');
-var cui = CnvUI().attach(cnv);
+var cui = CnvUI.create().attach(cnv);
 
-cui.addButton({
+cui.add(CnvUI.button({
 	pt1: { from: 'topleft' , x: 50, y:  50 },
 	pt2: { from: 'topright', x: 50, y: 150 },
 	text: 'Hello\nWorld',
@@ -25,39 +25,57 @@ cui.addButton({
 	dy: 5,
 	click: (function(){
 		var times = 0;
-		return function(comp){
+		return function(){
 			times++;
-			comp.state.text = 'Clicked ' + times + ' time' + (times != 1 ? 's' : '');
-			comp.invalidate();
+			this.text = 'Clicked ' + times + ' time' + (times != 1 ? 's' : '');
+			this.invalidate();
 		};
 	})()
-});
+}));
 
-cui.addScrollbar({
+cui.add(CnvUI.scrollbar({
 	pt1: { from: 'topleft' , x: 50, y: 170 },
 	pt2: { from: 'topright', x: 50, y: 230 },
 	horizontal: true,
 	dy: 5,
 	edgeSize: 16,
-	windowRange: [0, 50],
-	windowSize: 10,
-	beforeUpdate: function(comp, start, size){
-		return { value: Math.round(start), size: Math.round(size) };
+	range: [0, 50],
+	value: 0,
+	size: 10,
+	beforeUpdate: function(value, size){
+		return { value: Math.round(value), size: Math.round(size) };
 	},
-	update: function(comp, start, size){
-		ctx.fillStyle = '#f00';
+	update: function(){
+		var value = this.value;
+		var size = this.size;
+		ctx.fillStyle = '#eee';
 		ctx.fillRect(50, 230, cnv.width - 100, 100);
 		ctx.save();
 		ctx.beginPath();
 		ctx.rect(50, 230, cnv.width - 100, 100);
 		ctx.closePath();
 		ctx.clip();
-		([[0, 30, 10]]]).forEach(function(rect){
-
+		([
+			[ 0, 60,  5, 30, '#55b'],
+			[ 5, 20, 10, 30, '#5b5'],
+			[10, 80,  8, 30, '#5bb'],
+			[15, 30, 16, 30, '#b55'],
+			[20, 70, 14, 30, '#b5b'],
+			[25, 40, 20, 30, '#bb5'],
+			[30, 60, 18, 30, '#11f'],
+			[35, 50, 15, 30, '#1f1']
+		]).forEach(function(rect){
+			var x1 = rect[0];
+			var y1 = rect[1];
+			var x2 = x1 + rect[2];
+			var y2 = y1 + rect[3];
+			function proj(x){ return (x - value) * (cnv.width - 100) / size + 50; }
+			ctx.fillStyle = rect[4];
+			ctx.fillRect(proj(x1), 230 + y1, proj(x2) - proj(x1), y2 - y1);
 		});
 		ctx.restore();
 	}
-});
+}));
 
 	</script>
 </body>
