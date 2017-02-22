@@ -14,7 +14,7 @@ var CnvUI = {
 		scrollbar: {
 			gutter: { normal: '#88f', disabled: '#777', hover: '#aaf', active: '#ccf' },
 			button: { normal: '#400', disabled: '#777', hover: '#700', active: '#b00' },
-			arrow : { normal: '#000', disabled: '#777', hover: '#333', active: '#444' },
+			arrow : { normal: '#fff', disabled: '#777', hover: '#333', active: '#444' },
 			thumb : { normal: '#aaa', disabled: '#777', hover: '#ccc', active: '#eee' },
 			edge  : { normal: '#bbb', disabled: '#777', hover: '#ddd', active: '#eee' }
 		}
@@ -379,13 +379,15 @@ var CnvUI = {
 	},
 	scrollbar: function(ext){
 		var comp = CnvUI.component(CnvUI.extend({
-			state: { over: false, active: false },
+			state: { over: false, active: false, mx: 0, my: 0, timer: false },
 			skin: ['scrollbar'],
 			horizontal: true,
 			dx: 0,
 			dy: 0,
 			edgeSize: 0,
 			value: 0,
+			stepSize: 1,
+			pageSize: 10,
 			size: 1,
 			range: [0, 0],
 			dragStart: 0,
@@ -405,6 +407,22 @@ var CnvUI = {
 					this.update();
 					this.invalidate();
 				}
+			},
+			step: function(amt){
+				var nv = this.value + amt * this.stepSize;
+				var u = this.beforeUpdate(nv, this.size);;
+				if (typeof u === 'undefined')
+					u = { value: nv, size: this.size };
+				this.set(u.value, u.size);
+				return this;
+			},
+			page: function(amt){
+				var nv = this.value + amt * this.pageSize;
+				var u = this.beforeUpdate(nv, this.size);;
+				if (typeof u === 'undefined')
+					u = { value: nv, size: this.size };
+				this.set(u.value, u.size);
+				return this;
 			},
 			regions: function(){
 				var r = this.rect();
@@ -456,8 +474,11 @@ var CnvUI = {
 					};
 				}
 				else{
+					var gutterh = r.height - r.width * 2;
+					var thumb1pos = Math.round(value1p * gutterh);
+					var thumb2pos = Math.round(value2p * gutterh);
 					return {
-						valuePerPix: dwr / gutterw,
+						valuePerPix: dwr / gutterh,
 						arrow1: {
 							x: r.x,
 							y: r.y,
@@ -474,23 +495,23 @@ var CnvUI = {
 							x: r.x,
 							y: r.y + r.width,
 							width: r.width,
-							height: r.height - r.width * 2
+							height: gutterh
 						},
 						edge1: {
 							x: r.x,
-							y: 0,
+							y: r.y + r.width + thumb1pos,
 							width: r.width,
 							height: this.edgeSize
 						},
 						thumb: {
 							x: r.x,
-							y: 0,
+							y: r.y + r.width + thumb1pos + this.edgeSize,
 							width: r.width,
-							height: 10
+							height: thumb2pos - thumb1pos - 2 * this.edgeSize
 						},
 						edge2: {
 							x: r.x,
-							y: 0,
+							y: r.y + r.width + thumb2pos - this.edgeSize,
 							width: r.width,
 							height: this.edgeSize
 						}
@@ -501,6 +522,8 @@ var CnvUI = {
 				var r = this.regions();
 				this.state.over = false;
 				this.state.active = false;
+				this.state.mx = mx;
+				this.state.my = my;
 				var th = this;
 				function testr(ov){
 					var rr = r[ov];
@@ -533,7 +556,57 @@ var CnvUI = {
 					this.dragStart = this.horizontal ? mx : my;
 					return true; // capture mouse
 				}
-				// TODO: handle click
+				var th = this;
+				function checkhold(){
+					function recalc(){
+						if (!th.state.active)
+							return false;
+						if (th.state.over === 'arrow1' || th.state.over === 'arrow2')
+							return th.state.over;
+						else if (th.state.over === 'gutter'){
+							var r = th.regions();
+							if (th.horizontal){
+								if (th.state.mx < r.thumb.x + r.thumb.width * 0.5)
+									return 'gutter1';
+								return 'gutter2';
+							}
+							else{
+								if (th.state.my < r.thumb.y + r.thumb.height * 0.5)
+									return 'gutter1';
+								return 'gutter2';
+							}
+						}
+						return false;
+					}
+
+					var type = recalc();
+					if (type === false)
+						return;
+
+					function tick(){
+						switch (type){
+							case 'arrow1' : th.step(-1); break;
+							case 'arrow2' : th.step( 1); break;
+							case 'gutter1': th.page(-1); break;
+							case 'gutter2': th.page( 1); break;
+						}
+					}
+
+					tick();
+
+					function again(amt){
+						clearTimeout(th.state.timer);
+						th.state.timer = setTimeout(function(){
+							var tp = recalc();
+							if (tp !== type)
+								return;
+							tick();
+							again(100);
+						}, amt);
+					}
+					again(250);
+				}
+				checkhold();
 			},
 			mouseUp: function(mx, my, cap, over){
 				this.calcMouseState(mx, my);
@@ -616,7 +689,7 @@ var CnvUI = {
 								ns = this.range[1] - this.value;
 							var u = this.beforeUpdate(this.value, ns);
 							if (typeof u === 'undefined')
-								u = { value: nv, size: ns };
+								u = { value: ov, size: ns };
 							if (u.size <= 0)
 								u.size = os;
 							else if (u.size > this.range[1] -
@@ -634,7 +707,9 @@ var CnvUI = {
 					}
 				}
 				else{
+					var act = this.state.active;
 					this.calcMouseState(mx, my);
+					this.state.active = act;
 					this.invalidate();
 				}
 			},
@@ -659,6 +734,74 @@ var CnvUI = {
 				ctx.fillRect(r.thumb.x, r.thumb.y, r.thumb.width, r.thumb.height);
 				ctx.fillStyle = getst('edge', 'edge2');
 				ctx.fillRect(r.edge2.x, r.edge2.y, r.edge2.width, r.edge2.height);
+
+				// draw arrows
+				var ar_left   = 0.30;
+				var ar_right  = 0.65;
+				var ar_top    = 0.25;
+				var ar_bottom = 0.75;
+				if (this.horizontal){
+					ctx.beginPath();
+					var dx = this.state.over === 'arrow1' && this.state.active ? this.dx : 0;
+					var dy = this.state.over === 'arrow1' && this.state.active ? this.dy : 0;
+					ctx.moveTo(
+						r.arrow1.x + r.arrow1.width  * ar_left   + dx,
+						r.arrow1.y + r.arrow1.height * 0.5       + dy);
+					ctx.lineTo(
+						r.arrow1.x + r.arrow1.width  * ar_right  + dx,
+						r.arrow1.y + r.arrow1.height * ar_top    + dy);
+					ctx.lineTo(
+						r.arrow1.x + r.arrow1.width  * ar_right  + dx,
+						r.arrow1.y + r.arrow1.height * ar_bottom + dy);
+					ctx.fillStyle = getst('arrow', 'arrow1');
+					ctx.fill();
+
+					ctx.beginPath();
+					dx = this.state.over === 'arrow2' && this.state.active ? this.dx : 0;
+					dy = this.state.over === 'arrow2' && this.state.active ? this.dy : 0;
+					ctx.moveTo(
+						r.arrow2.x + r.arrow2.width  * (1 - ar_left)  + dx,
+						r.arrow2.y + r.arrow2.height * 0.5            + dy);
+					ctx.lineTo(
+						r.arrow2.x + r.arrow2.width  * (1 - ar_right) + dx,
+						r.arrow2.y + r.arrow2.height * ar_top         + dy);
+					ctx.lineTo(
+						r.arrow2.x + r.arrow2.width  * (1 - ar_right) + dx,
+						r.arrow2.y + r.arrow2.height * ar_bottom      + dy);
+					ctx.fillStyle = getst('arrow', 'arrow2');
+					ctx.fill();
+				}
+				else{
+					ctx.beginPath();
+					var dx = this.state.over === 'arrow1' && this.state.active ? this.dx : 0;
+					var dy = this.state.over === 'arrow1' && this.state.active ? this.dy : 0;
+					ctx.moveTo(
+						r.arrow1.x + r.arrow1.width  * 0.5       + dx,
+						r.arrow1.y + r.arrow1.height * ar_left   + dy);
+					ctx.lineTo(
+						r.arrow1.x + r.arrow1.width  * ar_top    + dx,
+						r.arrow1.y + r.arrow1.height * ar_right  + dy);
+					ctx.lineTo(
+						r.arrow1.x + r.arrow1.width  * ar_bottom + dx,
+						r.arrow1.y + r.arrow1.height * ar_right  + dy);
+					ctx.fillStyle = getst('arrow', 'arrow1');
+					ctx.fill();
+
+					ctx.beginPath();
+					dx = this.state.over === 'arrow2' && this.state.active ? this.dx : 0;
+					dy = this.state.over === 'arrow2' && this.state.active ? this.dy : 0;
+					ctx.moveTo(
+						r.arrow2.x + r.arrow2.width  * 0.5            + dx,
+						r.arrow2.y + r.arrow2.height * (1 - ar_left)  + dy);
+					ctx.lineTo(
+						r.arrow2.x + r.arrow2.width  * ar_top         + dx,
+						r.arrow2.y + r.arrow2.height * (1 - ar_right) + dy);
+					ctx.lineTo(
+						r.arrow2.x + r.arrow2.width  * ar_bottom      + dx,
+						r.arrow2.y + r.arrow2.height * (1 - ar_right) + dy);
+					ctx.fillStyle = getst('arrow', 'arrow2');
+					ctx.fill();
+				}
 			}
 		}, ext));
 		comp.set(comp.value, comp.size, true);
